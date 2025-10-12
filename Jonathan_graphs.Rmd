@@ -1,0 +1,95 @@
+---
+title: "graphs"
+author: "DATA350"
+date: "2025-10-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(NHANES)
+library(tidyverse)
+library(ggthemes)
+library(scales)
+library(patchwork)
+
+```
+
+```{r, include=FALSE}
+data("NHANESraw")
+glimpse(NHANESraw)
+
+```
+
+```{r, include=FALSE}
+nhanes_clean <- NHANESraw |>
+  select(Age, Gender, Race1, Education, BMI, PhysActive,
+         Alcohol12PlusYr,
+         DaysPhysHlthBad, DaysMentHlthBad) |>
+  filter(!is.na(Age), !is.na(Gender)) |>
+  mutate(
+    PhysHealthCat = case_when(
+      DaysPhysHlthBad == 0 ~ "Good",
+      DaysPhysHlthBad <= 10 ~ "Moderate",
+      TRUE ~ "Poor"
+    ),
+    MentHealthCat = case_when(
+      DaysMentHlthBad == 0 ~ "Good",
+      DaysMentHlthBad <= 10 ~ "Moderate",
+      TRUE ~ "Poor"
+    )
+  )
+
+```
+
+```{r}
+ggplot(nhanes_clean, aes(x = Education, fill = MentHealthCat)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Education vs. Self-Reported Mental Health",
+    x = "Education Level",
+    y = "Proportion of Respondents",
+    fill = "Mental Health"
+  ) +
+  theme_bw()
+
+```
+
+```{r}
+ggplot(nhanes_clean, aes(x = BMI, fill = PhysHealthCat)) +
+  geom_density(alpha = 0.5) +
+  labs(
+    title = "BMI Distribution by Physical Health Category",
+    x = "Body Mass Index (BMI)",
+    y = "Density",
+    fill = "Physical Health"
+  ) +
+  theme_economist_white()
+
+```
+
+```{r}
+ggplot(nhanes_clean, aes(x = DaysPhysHlthBad)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "white") +
+  labs(
+    title = "Distribution of Bad Physical Health Days",
+    x = "Number of Bad Physical Health Days (Past 30 Days)",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(nhanes_clean, aes(x = Gender, fill = Alcohol12PlusYr)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Alcohol Use by Gender",
+    x = "Gender",
+    y = "Proportion",
+    fill = "Used Alcohol (Past Year)"
+  ) +
+  theme_classic()
+
+```
+
