@@ -3,7 +3,8 @@ title: "Project 1 Jonathon M's Graphs"
 name: "Jonathon Meyer"
 output: html_document
 ---
-```{r}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(ggplot2)
 library(dplyr)
 library(GGally)
@@ -14,29 +15,37 @@ library(paletteer)
 
 ```{r}
 N <- NHANES::NHANESraw
-slice_sample(N, n=5)
 ```
 ## What relationships exist between hypertension, BMI, and Diabetes Presence?
+Hypertension, or high blood pressure, is defined as a persistent systolic blood pressure of at least 130 mmHg and a diastolic blood pressure of more than 80 mmHg. Certain chronic illnesses, such as obesity and diabetes, may be correlated with having hypertension. This study analyzes this relationship through visualizing the relationship between hypertension, BMI as a metric for obesity, and diabetes diagnosis. The NHANES dataset was modified to define a new variable, `Hypertension`, that uses the above definition to determine if a subject has hypertension. The distribution of each category vs BMI is visualized by a violin plot. A 3 point summary of the interquartile range and median were calculated and plotted.
 ```{r}
 N_hyper <- N %>%
   mutate(Hypertension = case_when(BPSysAve >= 130 & BPDiaAve > 80 ~ "Hypertension", BPSysAve < 130 & BPDiaAve <= 80 ~ "Normal Blood Pressure")) %>%
   select(Hypertension, Diabetes, BMI) %>%
   na.omit()
 
-p_BMI <- ggplot(N_hyper, aes(x = Hypertension, y = BMI, fill = Diabetes)) +
+p_BMI <- ggplot(N_hyper, aes(y = Hypertension, x = BMI, fill = Diabetes)) +
   geom_violin() +
   stat_summary(fun.data = function(y) {return(data.frame(y = median(y), ymin = quantile(y, 0.25), ymax = quantile(y, 0.75)))}, geom = "errorbar", width = 0.1, position=position_dodge(width=0.9)) +
   stat_summary(fun = median, mapping = aes(group = Diabetes), position=position_dodge(width=0.9), geom = "point", size = 3, show.legend = F) +
-  labs(title = "Association of Diabetes and BMI on Hypertension", x = "BMI", y = "Presence of Hypertension", fill = "Has Diabetes") + 
-  ggthemes::theme_foundation() + 
-  scale_fill_paletteer_d("dichromat::BluetoGray_8")
+  labs(title = "Association of Between BMI, Hypertension, and Diabetes Status", x = "BMI", y = "Presence of Hypertension", fill = "Has Diabetes") + 
+  ggthemes::theme_foundation()
+  scale_fill_paletteer_d("dichromat::BluetoGray_8") +
+  theme(
+    axis
+  )
 p_BMI
 ```
+The violin plot demonstrates that all categories are skewed right by outlines. The median BMI between diabetes status was slightly different, with having diabetes being associated with having a higher BMI. This difference was not as pronounced between hypertension and BMI, except for the normal blood pressure group.
 
+To quantify the correlation between BMI, diabetes presence, and hypertension, a correlation plot was constructed. As `diabetes`, and   `hypertension` are defined as categorical variables, they were converted to binary numeric values separately: 0 for no diabetes and normal blood pressure, 1 for diabetes and hypertension. By using this procedure, these values will remain nominal and retain their meaning in the correlation analysis. A correlation matrix was calculated and used in the `ggcorrplot` function to construct the correlation plot below. Additionally, a p-value matrix was constructed to calculate the significance between each variable. An x through a tile on the below graph indicates statistical insignificance at an alpha value of 0.05.
 ```{r}
 N_hyper_corr <- N_hyper %>%
   mutate(Diabetes = case_when(Diabetes == "Yes" ~ 1, Diabetes == "No" ~ 0)) %>% 
   mutate(Hypertension = case_when(Hypertension == "Hypertension" ~ 1, Hypertension == "Normal Blood Pressure" ~ 0))
 N_hyper_p_mat <- cor(N_hyper_corr)
-ggcorrplot(N_hyper_p_mat, method = "square", type = "upper", show.diag = F, outline.color = "black", ggtheme = ggthemes::theme_tufte(), lab = T, lab_size = 7)
+pmatrix <- cor_pmat(N_hyper_corr)
+ggcorrplot(N_hyper_p_mat, p.mat = pmatrix, insig = "pch", method = "square", type = "upper", show.diag = F, outline.color = "black", ggtheme = ggthemes::theme_tufte(), lab = T, lab_size = 5, legend.title = "Correlation Coefficient") + 
+  labs(title = "Correlation Comparison of BMI, Diabetes Presence, and Hypertension Presence")
 ```
+All variables were weakly positively correlated, with diabetes and BMI having the highest correlation at only 0.24 BMI and hypertension had a slightly lower correlation coefficient of 0.19 followed by hypertension and diabetes at 0.09. Although they are weakly correlated, each variable is statistically significant as seen in the p-value matrix.
