@@ -12,88 +12,80 @@ library(tidyverse)
 library(ggthemes)
 library(scales)
 library(patchwork)
+library(labelled)
 
 ```
 
-```{r, include=FALSE}
+```{r, include=TRUE}
 data("NHANESraw")
 glimpse(NHANESraw)
 
 ```
+```{r}
+data_dict_labelled <- look_for(NHANESraw)
+print(data_dict_labelled)
+```
 
 ```{r, include=FALSE}
-nhanes_clean <- NHANESraw |>
-  select(Age, Gender, Race1, Education, BMI, PhysActive,
-         Alcohol12PlusYr,
-         DaysPhysHlthBad, DaysMentHlthBad) |>
-  filter(!is.na(Age), !is.na(Gender)) |>
+
+data("NHANES")
+
+nhanes_clean <- NHANES |>
+  select(Age, Gender, Race1, BMI, Diabetes, BPSysAve,
+         Alcohol12PlusYr, Marijuana, HardDrugs) |>
+  filter(!is.na(Age), !is.na(Gender), !is.na(Race1)) |>
   mutate(
-    PhysHealthCat = case_when(
-      DaysPhysHlthBad == 0 ~ "Good",
-      DaysPhysHlthBad <= 10 ~ "Moderate",
-      TRUE ~ "Poor"
-    ),
-    MentHealthCat = case_when(
-      DaysMentHlthBad == 0 ~ "Good",
-      DaysMentHlthBad <= 10 ~ "Moderate",
-      TRUE ~ "Poor"
-    )
+    AgeGroup = cut(Age, breaks = c(0, 20, 40, 60, 80),
+                   labels = c("0–20","21–40","41–60","61–80"))
   )
 
-```
-## How do demographic factors correlate with physical/mental health?
-```{r}
-ggplot(nhanes_clean, aes(x = Education, fill = MentHealthCat)) +
-  geom_bar(position = "fill") +
-  labs(
-    title = "Education vs. Self-Reported Mental Health",
-    x = "Education Level",
-    y = "Proportion of Respondents",
-    fill = "Mental Health"
-  ) +
-  theme_bw()
 
 ```
-
-## Disease development
-
+## How do demographic factors correlate with physical/mental health and disease development?
 ```{r}
-ggplot(nhanes_clean, aes(x = BMI, fill = PhysHealthCat)) +
+ggplot(nhanes_clean, aes(x = BMI, fill = Diabetes)) +
   geom_density(alpha = 0.5) +
+  facet_wrap(~Race1) +
   labs(
-    title = "BMI Distribution by Physical Health Category",
+    title = "BMI Distribution by Diabetes Status, Faceted by Race",
     x = "Body Mass Index (BMI)",
     y = "Density",
-    fill = "Physical Health"
+    fill = "Diabetes"
   ) +
   theme_economist_white()
 
-```
 
-## Self-reported bad physical/mental health days
-```{r}
-ggplot(nhanes_clean, aes(x = DaysPhysHlthBad)) +
-  geom_histogram(binwidth = 2, fill = "steelblue", color = "white") +
-  labs(
-    title = "Distribution of Bad Physical Health Days",
-    x = "Number of Bad Physical Health Days (Past 30 Days)",
-    y = "Count"
-  ) +
-  theme_minimal()
 
 ```
 
 ## What relationships exist between demographic information and alcohol/substance use?
+
 ```{r}
-ggplot(nhanes_clean, aes(x = Gender, fill = Alcohol12PlusYr)) +
-  geom_bar(position = "fill") +
-  labs(
-    title = "Alcohol Use by Gender",
-    x = "Gender",
-    y = "Proportion",
-    fill = "Used Alcohol (Past Year)"
+
+nhanes_sub <- nhanes_clean |>
+  pivot_longer(cols = c(Alcohol12PlusYr, Marijuana, HardDrugs),
+               names_to = "Substance", values_to = "Used") |>
+  filter(!is.na(Used))
+
+
+ggplot(nhanes_sub, aes(x = Gender, fill = Used)) +
+  geom_bar(position = "dodge") +   # side-by-side bars for clarity
+  geom_text(
+    stat = "count",
+    aes(label = after_stat(count)),
+    position = position_dodge(width = 0.9),
+    vjust = -0.4,
+    size = 3
   ) +
-  theme_classic()
+  facet_wrap(~Substance) +
+  labs(
+    title = "Substance Use by Gender (with Respondent Counts)",
+    x = "Gender",
+    y = "Number of Respondents",
+    fill = "Used (Yes/No)"
+  ) +
+  theme_minimal()
+
 
 ```
 
