@@ -1,0 +1,130 @@
+---
+title: "Group Project"
+author: "DATA350"
+date: "2025-10-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(NHANES)
+library(tidyverse)
+library(ggthemes)
+library(scales)
+library(patchwork)
+library(tidyr)
+library(ggridges)
+```
+
+
+```{r, include=TRUE, fig.width=12, fig.height=8}
+data <- NHANESraw
+clean_data <- NHANESraw |>
+  select(Age, Gender, BMI, PhysActiveDays, Work, Depressed, SleepHrsNight, 
+         Alcohol12PlusYr, Marijuana, HardDrugs) |>
+  filter(!is.na(Age), !is.na(Gender), !is.na(BMI), !is.na(Work), 
+         !is.na(Depressed), !is.na(Alcohol12PlusYr), !is.na(Marijuana), 
+         !is.na(HardDrugs), !is.na(PhysActiveDays), !is.na(SleepHrsNight)) |>
+  mutate(
+    Work_bin = case_when(
+      Work == "Working" ~ "Yes",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    Depressed_bin = case_when(
+      Depressed %in% c("Several", "Most") ~ "Yes",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    Alcohol_bin = case_when(
+      Alcohol12PlusYr == "Yes" ~ "Yes",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    Drug_bin = case_when(
+      Marijuana == "Yes" | HardDrugs == "Yes" ~ "Yes",
+      Marijuana == "No" & HardDrugs == "No" ~ "No",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    PhysActive_cat = case_when(
+      PhysActiveDays == 0 ~ "None",
+      PhysActiveDays <= 2 ~ "Low (1-2)",
+      PhysActiveDays <= 5 ~ "Moderate (3-5)",
+      PhysActiveDays > 5 ~ "High (>5)"
+    ) |> factor(levels = c("None", "Low (1-2)", "Moderate (3-5)", "High (>5)")),
+    
+    Sleep_cat = case_when(
+      SleepHrsNight < 5 ~ "Very Short (<5)",
+      SleepHrsNight < 7 ~ "Short (5-7)",
+      SleepHrsNight <= 9 ~ "Normal (7-9)",
+      SleepHrsNight > 9 ~ "Long (>9)"
+    ) |> factor(levels = c("Very Short (<5)", "Short (5-7)", "Normal (7-9)",
+                           "Long (>9)"))
+  )
+
+cat_data <- clean_data |>
+  select(BMI, Work_bin, Depressed_bin, Alcohol_bin, Drug_bin, PhysActive_cat, 
+         Sleep_cat) |>
+  pivot_longer(cols = -BMI, names_to = "variable", values_to = "category") 
+
+custom_colors <- c(
+  "No" = "#E41A1C", "Yes" = "#377EB8",
+  "None" = "#FF7F00", "Low (1-2)" = "#FDBF6F",
+  "Moderate (3-5)" = "#4DAF4A", "High (>5)" = "#984EA3",
+  "Very Short (<5)" = "#A65628", "Short (5-7)" = "#F781BF",
+  "Normal (7-9)" = "#999999", "Long (>9)" = "#66C2A5"
+)
+
+facet_labels <- c(
+  Work_bin = "Working Status",
+  Depressed_bin = "Depression",
+  Alcohol_bin = "Alcohol Use (12+ Days per Year)",
+  Drug_bin = "Any Drug Use",
+  PhysActive_cat = "Physical Activity Level",
+  Sleep_cat = "Sleep Duration"
+)
+
+ggplot(cat_data, aes(x = category, y = BMI, fill = category)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  facet_wrap(~variable, scales = "free_x", ncol = 3,
+             labeller = labeller(variable = facet_labels)) +
+  scale_fill_manual(values = custom_colors) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "BMI Distribution Across Lifestyle Factors",
+    x = NULL,
+    y = "BMI"
+  ) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(face = "bold", size = 12)
+  )
+
+clean_data_ridge <- NHANESraw |>
+  filter(!is.na(Age), !is.na(BMI), !is.na(Gender)) |>
+  mutate(
+    Age_group = cut(
+      Age,
+      breaks = c(0, 18, 30, 45, 60, 80, 100),
+      labels = c("0-17", "18-29", "30-44", "45-59", "60-79", "80+"),
+      right = FALSE
+    )
+  )
+
+ggplot(clean_data_ridge, aes(x = BMI, y = Age_group, fill = Gender)) +
+  geom_density_ridges(
+    alpha = 0.7,
+    scale = 0.9,
+    position = "identity"
+  ) +
+  scale_fill_manual(values = c("male" = "#377EB8", "female" = "#F781BF")) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "BMI Distribution by Age Group and Gender",
+    x = "BMI",
+    y = "Age Group",
+    fill = "Gender"
+  )
+```
