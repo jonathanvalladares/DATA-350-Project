@@ -16,14 +16,15 @@ library(labelled)
 
 ```
 
-```{r, include=TRUE}
+```{r, include=FALSE}
 data("NHANESraw")
 glimpse(NHANESraw)
 
 ```
+
 ```{r}
-data_dict_labelled <- look_for(NHANESraw)
-print(data_dict_labelled)
+#data_dict_labelled <- look_for(NHANESraw)
+#print(data_dict_labelled)
 ```
 
 ```{r, include=FALSE}
