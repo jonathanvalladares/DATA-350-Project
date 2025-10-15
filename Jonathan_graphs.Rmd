@@ -108,9 +108,9 @@ This visualization highlights the strong relationship between diabetes risk and 
 
 Figure 2: Substance Use by Gender (Alcohol, Hard Drugs, and Marijuana)
 
-This figure compares substance use behaviors between male and female respondents. The bars represent the number of people who reported using (red) or not using (blue) each substance, including alcohol (past 12 months), hard drugs, and marijuana.
+This figure compares substance use behaviors between male and female respondents. The histogram represent the number of individuals who reported using (red) or not using (blue) each substance, including alcohol (past 12 months), hard drugs, and marijuana.
 
-From the graph, males generally report higher usage across all categories. For example, more men than women reported consuming alcohol in the past year and using marijuana. The differences are less pronounced for hard drug use, where both genders show similar counts, though males still slightly outnumber females.
+From the histogram, males generally report higher usage across all categories. For example, 620 more males than females reported consuming alcohol in the past year. It appears that women are unlikely to use hard drugs relative to men. In terms of marijuana use the differences between male and female do not seem to be too pronounced.
 
 Significance:
 This visualization reveals a gender gap in substance use patterns, with men tending to engage more in alcohol and marijuana use. These patterns are consistent with broader behavioral research showing gender differences in health-risk behaviors. Recognizing such trends can help design gender-specific awareness campaigns and prevention programs that address differing social and cultural influences on substance use.
