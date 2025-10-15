@@ -90,3 +90,27 @@ ggplot(nhanes_sub, aes(x = Gender, fill = Used)) +
 
 ```
 
+## How Does BMI Relate to Race and Diabetes?
+
+Figure 1: BMI Distribution by Diabetes Status, Faceted by Race
+
+This figure shows how Body Mass Index (BMI) varies across different racial groups and diabetes statuses. Each panel represents one racial category—Black, Hispanic, Mexican, White, and Other—while the colored density curves represent participants with diabetes (Yes), without diabetes (No), and those with missing data (NA).
+Across all racial groups, the red curves (individuals with diabetes) tend to peak at higher BMI values compared to the blue curves (those without diabetes). For example, in the White and Mexican groups, people with diabetes cluster around BMI values of 30 and higher (the obese range), while those without diabetes peak closer to the mid-20s (the overweight range).
+
+This indicates a clear trend: higher BMI is associated with a greater likelihood of diabetes. Although the general pattern is consistent across races, the exact shape and spread of the curves vary slightly, suggesting that racial and possibly socioeconomic factors may influence BMI and diabetes outcomes.
+
+
+Significance:
+This visualization highlights the strong relationship between BMI and diabetes risk and suggests that this relationship exists across racial groups. It also underscores how public health strategies addressing obesity and diabetes prevention may need to consider demographic differences in order to be most effective.
+
+
+## What Relationship Exists Between Gender and Substance Use?
+
+Figure 2: Substance Use by Gender (Alcohol, Hard Drugs, and Marijuana)
+
+This figure compares substance use behaviors between male and female respondents. The bars represent the number of people who reported using (red) or not using (blue) each substance, including alcohol (past 12 months), hard drugs, and marijuana.
+
+From the graph, males generally report higher usage across all categories. For example, more men than women reported consuming alcohol in the past year and using marijuana. The differences are less pronounced for hard drug use, where both genders show similar counts, though males still slightly outnumber females.
+
+Significance:
+This visualization reveals a gender gap in substance use patterns, with men tending to engage more in alcohol and marijuana use. These patterns are consistent with broader behavioral research showing gender differences in health-risk behaviors. Recognizing such trends can help design gender-specific awareness campaigns and prevention programs that address differing social and cultural influences on substance use.
