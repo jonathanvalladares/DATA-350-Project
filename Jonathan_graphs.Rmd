@@ -94,14 +94,14 @@ ggplot(nhanes_sub, aes(x = Gender, fill = Used)) +
 
 Figure 1: BMI Distribution by Diabetes Status, Faceted by Race
 
-This figure shows how diabetes status  varies by Body Mass Index (BMI) across different racial groups and diabetes statuses. Each panel represents one racial category—Black, Hispanic, Mexican, White, and Other—while the colored density curves represent participants with diabetes (Yes), without diabetes (No), and those with missing data (NA).
-Across all racial groups, the red curves (individuals with diabetes) tend to peak at higher BMI values compared to the blue curves (those without diabetes). For example, in the White and Mexican groups, people with diabetes cluster around BMI values of 30 and higher (the obese range), while those without diabetes peak closer to the mid-20s (the overweight range).
+This figure shows how diabetes status  varies by Body Mass Index (BMI) across different racial groups and diabetes statuses. Each panel represents a racial category while the colored density curves represent the percentage of participants with diabetes (Yes), without diabetes (No), and those with missing data (NA).
+Across all racial groups, the percentage of individuals with diabetes tend to peak at higher BMI values compared to those without diabetes. For example, in the White and Mexican racial groups, participants with diabetes cluster around BMI values of 30 and higher (the obese range), while those without diabetes peak closer to the mid-20s (the normal to borderline overweight range).
 
-This indicates a clear trend: higher BMI is associated with a greater likelihood of diabetes. Although the general pattern is consistent across races, the exact shape and spread of the curves vary slightly, suggesting that racial and possibly socioeconomic factors may influence BMI and diabetes outcomes.
+This figure indicates a clear trend: a greater likelihood of diabetes is associated with a higher BMI. Although the general pattern is consistent across races, the exact shape and spread of the curves vary slightly, suggesting that racial factors and possibly socioeconomic factors associated with race may influence BMI and diabetes outcomes.
 
 
 Significance:
-This visualization highlights the strong relationship between BMI and diabetes risk and suggests that this relationship exists across racial groups. It also underscores how public health strategies addressing obesity and diabetes prevention may need to consider demographic differences in order to be most effective.
+This visualization highlights the strong relationship between diabetes risk and BMI  and suggests that this relationship exists across racial groups. It also underscores how public health strategies addressing obesity and diabetes prevention may need to consider demographic factors in order to be most effective.
 
 
 ## What Relationship Exists Between Gender and Substance Use?
