@@ -27,15 +27,24 @@ glimpse(NHANESraw)
 #print(data_dict_labelled)
 ```
 
+
 ```{r, include=FALSE}
+data("NHANESraw")
 
-data("NHANES")
-
-nhanes_clean <- NHANES |>
-  select(Age, Gender, Race1, BMI, Diabetes, BPSysAve,
+nhanes_clean <- NHANESraw |>
+  select(Age, Gender, Race1, BMI, Diabetes,
          Alcohol12PlusYr, Marijuana, HardDrugs) |>
-  filter(!is.na(Age), !is.na(Gender), !is.na(Race1)) |>
+  filter(
+    !is.na(Age),
+    !is.na(Gender),
+    !is.na(Race1),
+    !is.na(BMI),
+    !is.na(Diabetes)  # ✅ exclude missing Diabetes rows
+  ) |>
   mutate(
+    Gender = droplevels(Gender),
+    Race1 = droplevels(Race1),
+    Diabetes = droplevels(Diabetes),
     AgeGroup = cut(Age, breaks = c(0, 20, 40, 60, 80),
                    labels = c("0–20","21–40","41–60","61–80"))
   )
@@ -45,16 +54,15 @@ nhanes_clean <- NHANES |>
 ## How do demographic factors correlate with physical/mental health and disease development?
 ```{r}
 ggplot(nhanes_clean, aes(x = BMI, fill = Diabetes)) +
-  geom_density(alpha = 0.5) +
+  geom_density(alpha = 0.5, na.rm = TRUE) +
   facet_wrap(~Race1) +
   labs(
-    title = "BMI Distribution by Diabetes Status, Faceted by Race",
+    title = "BMI Distribution by Diabetes Status (Raw NHANES Data)",
     x = "Body Mass Index (BMI)",
     y = "Density",
     fill = "Diabetes"
   ) +
   theme_economist_white()
-
 
 
 ```
@@ -95,6 +103,7 @@ ggplot(nhanes_sub, aes(x = Gender, fill = Used)) +
 Figure 1: BMI Distribution by Diabetes Status, Faceted by Race
 
 This figure shows how diabetes status  varies by Body Mass Index (BMI) across different racial groups and diabetes statuses. Each panel represents a racial category while the colored density curves represent the percentage of participants with diabetes (Yes), without diabetes (No), and those with missing data (NA).
+
 Across all racial groups, the percentage of individuals with diabetes tend to peak at higher BMI values compared to those without diabetes. For example, in the White and Mexican racial groups, participants with diabetes cluster around BMI values of 30 and higher (the obese range), while those without diabetes peak closer to the mid-20s (the normal to borderline overweight range).
 
 This figure indicates a clear trend: a greater likelihood of diabetes is associated with a higher BMI. Although the general pattern is consistent across races, the exact shape and spread of the curves vary slightly, suggesting that racial factors and possibly socioeconomic factors associated with race may influence BMI and diabetes outcomes.
@@ -110,7 +119,7 @@ Figure 2: Substance Use by Gender (Alcohol, Hard Drugs, and Marijuana)
 
 This figure compares substance use behaviors between male and female respondents. The histogram represent the number of individuals who reported using (red) or not using (blue) each substance, including alcohol (past 12 months), hard drugs, and marijuana.
 
-From the histogram, males generally report higher usage across all categories. For example, 620 more males than females reported consuming alcohol in the past year. It appears that women are unlikely to use hard drugs relative to men. In terms of marijuana use the differences between male and female do not seem to be too pronounced.
+From the histogram, males generally report higher usage across all categories. For example, 1,178 more males than females reported consuming alcohol in the past year. It appears that both women and men are almost equally as unlikely to use hard drugs. In terms of marijuana use the differences between male and female do not seem to be too pronounced.
 
 Significance:
-This visualization reveals a gender gap in substance use patterns, with men tending to engage more in alcohol and marijuana use. These patterns are consistent with broader behavioral research showing gender differences in health-risk behaviors. Recognizing such trends can help design gender-specific awareness campaigns and prevention programs that address differing social and cultural influences on substance use.
+This visualization reveals a gender gap in substance use patterns, with men tending to engage more in alcohol, hard drugs, and marijuana use. These patterns are consistent with broader behavioral research showing gender differences in health-risk behaviors. Recognizing such trends can help design gender-specific awareness campaigns and prevention programs that address differing social and cultural influences on substance use.
