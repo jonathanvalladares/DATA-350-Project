@@ -101,7 +101,7 @@ This figure indicates a clear trend: a greater likelihood of diabetes is associa
 
 
 Significance:
-This visualization highlights the strong relationship between diabetes risk and BMI  and suggests that this relationship exists across racial groups. It also underscores how public health strategies addressing obesity and diabetes prevention may need to consider demographic factors in order to be most effective.
+This visualization highlights the strong relationship between diabetes risk and BMI and suggests that this relationship exists across racial groups. It also underscores how public health strategies addressing obesity and diabetes prevention may need to consider demographic factors in order to be most effective.
 
 
 ## What Relationship Exists Between Gender and Substance Use?
