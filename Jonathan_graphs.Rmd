@@ -22,12 +22,6 @@ glimpse(NHANESraw)
 
 ```
 
-```{r}
-#data_dict_labelled <- look_for(NHANESraw)
-#print(data_dict_labelled)
-```
-
-
 ```{r, include=FALSE}
 data("NHANESraw")
 
@@ -57,7 +51,7 @@ ggplot(nhanes_clean, aes(x = BMI, fill = Diabetes)) +
   geom_density(alpha = 0.5, na.rm = TRUE) +
   facet_wrap(~Race1) +
   labs(
-    title = "BMI Distribution by Diabetes Status (Raw NHANES Data)",
+    title = "BMI Distribution by Diabetes Status",
     x = "Body Mass Index (BMI)",
     y = "Density",
     fill = "Diabetes"
