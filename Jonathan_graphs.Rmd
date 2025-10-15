@@ -94,7 +94,7 @@ ggplot(nhanes_sub, aes(x = Gender, fill = Used)) +
 
 Figure 1: BMI Distribution by Diabetes Status, Faceted by Race
 
-This figure shows how Body Mass Index (BMI) varies across different racial groups and diabetes statuses. Each panel represents one racial category—Black, Hispanic, Mexican, White, and Other—while the colored density curves represent participants with diabetes (Yes), without diabetes (No), and those with missing data (NA).
+This figure shows how diabetes status  varies by Body Mass Index (BMI) across different racial groups and diabetes statuses. Each panel represents one racial category—Black, Hispanic, Mexican, White, and Other—while the colored density curves represent participants with diabetes (Yes), without diabetes (No), and those with missing data (NA).
 Across all racial groups, the red curves (individuals with diabetes) tend to peak at higher BMI values compared to the blue curves (those without diabetes). For example, in the White and Mexican groups, people with diabetes cluster around BMI values of 30 and higher (the obese range), while those without diabetes peak closer to the mid-20s (the overweight range).
 
 This indicates a clear trend: higher BMI is associated with a greater likelihood of diabetes. Although the general pattern is consistent across races, the exact shape and spread of the curves vary slightly, suggesting that racial and possibly socioeconomic factors may influence BMI and diabetes outcomes.
