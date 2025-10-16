@@ -1,0 +1,362 @@
+---
+title: "Project 1 - Exploratory Data Analysis of the National Health and Nutrition Examination Survey Data"
+author: "Group 14 - Wyatt Riker, Jonathon Meyer, and Jonathan Valladares"
+date: "October 17th, 2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(ggcorrplot)
+library(paletteer)
+library(ggthemes)
+library(NHANES)
+library(tidyverse)
+library(scales)
+library(patchwork)
+library(tidyr)
+library(ggridges)
+library(labelled)
+```
+
+### Introduction
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This report presents an exploratory data analysis (EDA) of the NHANESraw data set from the NHANES package. Our analysis focuses on how demographic, behavioral, and health-related factors interact — such as BMI, sleep, physical activity, substance use, hypertension, and diabetes. We employ a range of visualization techniques including faceting, density plots, box plots, violin plots, ridge plots, and correlation heat maps.
+
+```{r}
+N <- NHANES::NHANESraw
+```
+### What relationships exist between hypertension, BMI, and Diabetes Presence?
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Hypertension, or high blood pressure, is defined as a persistent systolic blood pressure of at least 130 mmHg and a diastolic blood pressure of more than 80 mmHg. Certain chronic illnesses, such as obesity and diabetes, may be correlated with having hypertension. This study analyzes this relationship through visualizing the relationship between hypertension, BMI as a metric for obesity, and diabetes diagnosis. The NHANES dataset was modified to define a new variable, `Hypertension`, that uses the above definition to determine if a subject has hypertension. The distribution of each category vs BMI is visualized by a violin plot. A 3 point summary of the interquartile range and median were calculated and plotted.
+
+```{r fig.align='center'}
+N_hyper <- N %>%
+  mutate(Hypertension = case_when(BPSysAve >= 130 & BPDiaAve > 80 ~ "Hypertension", BPSysAve < 130 & BPDiaAve <= 80 ~ "Normal\nBlood\nPressure")) %>%
+  select(Hypertension, Diabetes, BMI) %>%
+  na.omit()
+
+p_BMI <- ggplot(N_hyper, aes(y = Hypertension, x = BMI, fill = Diabetes)) +
+  geom_violin() +
+  stat_summary(fun.data = function(y) {return(data.frame(y = median(y), ymin = quantile(y, 0.25), ymax = quantile(y, 0.75)))}, geom = "errorbar", width = 0.1, position=position_dodge(width=0.9)) +
+  stat_summary(fun = median, mapping = aes(group = Diabetes), position=position_dodge(width=0.9), geom = "point", size = 3, show.legend = F) +
+  labs(title = "Association of Between BMI, Hypertension, and Diabetes Status", x = "BMI", y = "Presence of Hypertension", fill = "Has Diabetes") + 
+  ggthemes::theme_economist() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14), 
+    legend.position = "right",                      
+    plot.margin = margin(10, 20, 10, 10),                   
+    axis.text.y = element_text(size = 10, hjust = 1),
+    axis.title.y = element_text(margin = margin(r = 15))
+  )
+p_BMI
+```
+<center><b>
+Figure 1
+</b></center><br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The violin plot demonstrates that all categories are skewed right by outlines. The median BMI between diabetes status was slightly different, with having diabetes being associated with having a higher BMI. This difference was not as pronounced between hypertension and BMI, except for the normal blood pressure group.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;To quantify the correlation between BMI, diabetes presence, and hypertension, a correlation plot was constructed. As `diabetes`, and   `hypertension` are defined as categorical variables, they were converted to binary numeric values separately: 0 for no diabetes and normal blood pressure, 1 for diabetes and hypertension. By using this procedure, these values will remain nominal and retain their meaning in the correlation analysis. A correlation matrix was calculated and used in the `ggcorrplot` function to construct the correlation plot below. Additionally, a p-value matrix was constructed to calculate the significance between each variable. An x through a tile on the below graph indicates statistical insignificance at an alpha value of 0.05.
+
+
+```{r fig.align='center'}
+N_hyper_corr <- N_hyper %>%
+  mutate(Diabetes = case_when(Diabetes == "Yes" ~ 1, Diabetes == "No" ~ 0)) %>% 
+  mutate(Hypertension = case_when(Hypertension == "Hypertension" ~ 1, Hypertension == "Normal\nBlood\nPressure" ~ 0))
+N_hyper_p_mat <- cor(N_hyper_corr)
+pmatrix <- cor_pmat(N_hyper_corr)
+ggcorrplot(N_hyper_p_mat, p.mat = pmatrix, insig = "pch", method = "square", type = "upper", show.diag = F, outline.color = "black", ggtheme = ggthemes::theme_economist(), lab = T, lab_size = 3, legend.title = "Correlation Coefficient") + 
+  labs(title = "Correlation Comparison of BMI, Diabetes Presence, and Hypertension Presence") +
+  theme(
+    plot.title = element_text(hjust = 0, size = 9, face = "bold"),
+    legend.position = "right",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8),
+    legend.key.size = unit(0.5, "cm")
+  )
+```
+<center><b>
+Figure 2
+</b></center><br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;All variables were weakly positively correlated, with diabetes and BMI having the highest correlation at only 0.24 BMI and hypertension had a slightly lower correlation coefficient of 0.19 followed by hypertension and diabetes at 0.09. Although they are weakly correlated, each variable is statistically significant as seen in the p-value matrix.
+
+### What lifestyle factors most impact weight and BMI?
+```{r, fig.width=12, fig.height=8}
+data <- NHANESraw
+clean_data <- NHANESraw |>
+  select(Age, Gender, BMI, PhysActiveDays, Work, Depressed, SleepHrsNight, 
+         Alcohol12PlusYr, Marijuana, HardDrugs) |>
+  filter(!is.na(Age), !is.na(Gender), !is.na(BMI), !is.na(Work), 
+         !is.na(Depressed), !is.na(Alcohol12PlusYr), !is.na(Marijuana), 
+         !is.na(HardDrugs), !is.na(PhysActiveDays), !is.na(SleepHrsNight)) |>
+  mutate(
+    Work_bin = case_when(
+      Work == "Working" ~ "Yes",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    Depressed_bin = case_when(
+      Depressed %in% c("Several", "Most") ~ "Yes",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    Alcohol_bin = case_when(
+      Alcohol12PlusYr == "Yes" ~ "Yes",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    Drug_bin = case_when(
+      Marijuana == "Yes" | HardDrugs == "Yes" ~ "Yes",
+      Marijuana == "No" & HardDrugs == "No" ~ "No",
+      TRUE ~ "No"
+    ) |> factor(levels = c("No", "Yes")),
+    
+    PhysActive_cat = case_when(
+      PhysActiveDays == 0 ~ "None",
+      PhysActiveDays <= 2 ~ "Low (1-2)",
+      PhysActiveDays <= 5 ~ "Moderate (3-5)",
+      PhysActiveDays > 5 ~ "High (>5)"
+    ) |> factor(levels = c("None", "Low (1-2)", "Moderate (3-5)", "High (>5)")),
+    
+    Sleep_cat = case_when(
+      SleepHrsNight < 5 ~ "Very Short (<5)",
+      SleepHrsNight < 7 ~ "Short (5-7)",
+      SleepHrsNight <= 9 ~ "Normal (7-9)",
+      SleepHrsNight > 9 ~ "Long (>9)"
+    ) |> factor(levels = c("Very Short (<5)", "Short (5-7)", "Normal (7-9)",
+                           "Long (>9)"))
+  )
+
+cat_data <- clean_data |>
+  select(BMI, Work_bin, Depressed_bin, Alcohol_bin, Drug_bin, PhysActive_cat, 
+         Sleep_cat) |>
+  pivot_longer(cols = -BMI, names_to = "variable", values_to = "category") 
+
+facet_labels <- c(
+  Work_bin = "Working Status",
+  Depressed_bin = "Depression",
+  Alcohol_bin = "Alcohol Use (12+ Days per Year)",
+  Drug_bin = "Any Drug Use",
+  PhysActive_cat = "Physical Activity Level",
+  Sleep_cat = "Sleep Duration"
+)
+
+ggplot(cat_data, aes(x = category, y = BMI, fill = category)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  stat_summary(
+    fun = median,
+    geom = "text",
+    aes(label = round(..y.., 1)),
+    position = position_dodge(width = 0.75),
+    vjust = -0.5,   
+    size = 3.5,
+    color = "black"
+  ) +
+  facet_wrap(~variable, scales = "free_x", ncol = 3,
+             labeller = labeller(variable = facet_labels)) +
+  theme_economist(base_size = 14) +
+  labs(
+    title = "BMI Distribution Across Lifestyle Factors",
+    x = NULL,
+    y = "BMI"
+  ) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    panel.spacing.y = unit(2, "lines"),
+    strip.text = element_text(face = "bold", size = 12),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14, margin = margin(b = 25)),
+    plot.margin = margin(20, 20, 40, 10)
+  )
+```
+<center><b>
+Figure 3
+</b></center><br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This figure and analysis aims to examine the relationship between BMI and various lifestyle factors. Among the factors studied, sleep duration and physical activity level show the most notable associations with BMI. Individuals with very short sleep durations (<5 hours) tend to have higher median BMI values compared to those with normal sleep patterns (7-9 hours), suggesting inadequate sleep may contribute to increased body weight. Similarly, higher levels of physical activity are associated with slightly lower median BMI, highlighting the potential benefits of an active lifestyle for weight management.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Other factors such as alcohol use, depression, drug use, and working status show minimal differences in median BMI, with substantial overlap between categories. These results suggest that while these factors may influence health in other ways, their direct impact on BMI is less pronounced in this data set.
+
+### How does BMI differ by age and gender?
+```{r fig.align='center', fig.width=12, fig.height=8}
+clean_data_ridge <- NHANESraw |>
+  filter(!is.na(Age), !is.na(BMI), !is.na(Gender)) |>
+  mutate(
+    Age_group = cut(
+      Age,
+      breaks = c(0, 18, 30, 45, 60, 80, 100),
+      labels = c("0-17", "18-29", "30-44", "45-59", "60-79", "80+"),
+      right = FALSE
+    )
+  )
+
+median_bmi <- clean_data_ridge |> 
+  group_by(Age_group, Gender) |>
+  summarize(median_BMI = median(BMI, na.rm = TRUE), .groups = "drop") |>
+  mutate(label = paste0("(", round(median_BMI, 1), ", ", Gender, ")"))
+  
+ggplot(clean_data_ridge, aes(x = BMI, y = Age_group, fill = Gender)) +
+  geom_density_ridges(
+    alpha = 0.7,
+    scale = 0.9,
+    position = "identity"
+  ) +
+  geom_segment( 
+    data = median_bmi, 
+    aes( x = median_BMI, 
+         xend = median_BMI, 
+         y = as.numeric(Age_group) + 0.05, 
+         yend = as.numeric(Age_group) - 0.05 ), 
+    color = "black", 
+    size = 1.1, 
+    show.legend = FALSE ) + 
+  geom_text( 
+    data = median_bmi |> 
+      mutate(
+        y_offset = ifelse(Gender == "female",
+                          as.numeric(Age_group) - 0.27,
+                          as.numeric(Age_group) - 0.15)),
+    aes( x = median_BMI, y = y_offset, label = label ), 
+    color = "black", 
+    size = 3.2, 
+    vjust = 0, 
+    show.legend = FALSE ) +
+  theme_economist(base_size = 14) +
+  labs(
+    title = "BMI Distribution by Age Group and Gender",
+    x = "BMI",
+    y = "Age Group",
+    fill = "Gender"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14, margin = margin(b = 15)),
+    legend.position = "right",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    legend.key.size = unit(1.2, "lines"),
+    axis.text = element_text(size = 12),
+    axis.title.x = element_text(size = 13, margin = margin(t = 15)),
+    axis.title.y = element_text(size = 13, margin = margin(r = 15))
+  )
+```
+<center><b>
+Figure 4
+</b></center><br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The figure above shows the distribution of BMI across different age groups, separated by gender. Each ridge represents the BMI distribution within an age group, with blue for males and pink for females. Across nearly all age groups, the BMI distribution is fairly similar between genders, though males tend to have slightly higher median BMI values in most groups. The distributions also shift slightly upward with age, peaking around middle adulthood (ages 30–59), suggesting that BMI generally increases with age before leveling off or declining in older groups. The spread of BMI is also wider among adults compared to younger individuals, indicating more variability in adult body composition. The largest difference in the results is the 0-17 age group, where BMI tends to be much lower on average, possibly due to their bodies still developing. Overall, the results suggest that BMI tends to rise with age up until middle adulthood and that males consistently show slightly higher BMI values than females across most age categories.
+
+### How do demographic factors correlate with physical/mental health and disease development?
+```{r fig.align='center'}
+data("NHANESraw")
+
+nhanes_clean <- NHANESraw |>
+  select(Age, Gender, Race1, BMI, Diabetes,
+         Alcohol12PlusYr, Marijuana, HardDrugs) |>
+  filter(
+    !is.na(Age),
+    !is.na(Gender),
+    !is.na(Race1),
+    !is.na(BMI),
+    !is.na(Diabetes)
+  ) |>
+  mutate(
+    Gender = droplevels(Gender),
+    Race1 = droplevels(Race1),
+    Diabetes = droplevels(Diabetes),
+    AgeGroup = cut(Age, breaks = c(0, 20, 40, 60, 80),
+                   labels = c("0–20","21–40","41–60","61–80"))
+  )
+
+ggplot(nhanes_clean, aes(x = BMI, fill = Diabetes)) +
+  geom_density(alpha = 0.5, na.rm = TRUE) +
+  facet_wrap(~Race1) +
+  labs(
+    title = "BMI Distribution by Diabetes Status",
+    x = "Body Mass Index (BMI)",
+    y = "Density",
+    fill = "Diabetes"
+  ) +
+  theme_economist(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14, margin = margin(b = 15)),
+    legend.position = "right",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    legend.key.size = unit(.8, "lines"),
+    axis.text = element_text(size = 12),
+    axis.title.x = element_text(size = 13, margin = margin(t = 15)),
+    axis.title.y = element_text(size = 13, margin = margin(r = 15)),
+    strip.text = element_text(face = "bold", size = 12)
+  )
+```
+<center><b>
+Figure 5
+</b></center><br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This figure shows how diabetes status  varies by Body Mass Index (BMI) across different racial groups and diabetes statuses. Each panel represents a racial category while the colored density curves represent the percentage of participants with diabetes (Yes), without diabetes (No), and those with missing data (NA).
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Across all racial groups, the percentage of individuals with diabetes tend to peak at higher BMI values compared to those without diabetes. For example, in the White and Mexican racial groups, participants with diabetes cluster around BMI values of 30 and higher (the obese range), while those without diabetes peak closer to the mid-20s (the normal to borderline overweight range).
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This figure indicates a clear trend: a greater likelihood of diabetes is associated with a higher BMI. Although the general pattern is consistent across races, the exact shape and spread of the curves vary slightly, suggesting that racial factors and possibly socioeconomic factors associated with race may influence BMI and diabetes outcomes.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This visualization highlights the strong relationship between diabetes risk and BMI and suggests that this relationship exists across racial groups. It also underscores how public health strategies addressing obesity and diabetes prevention may need to consider demographic factors in order to be most effective.
+
+### What relationships exist between demographic information and alcohol/substance use?
+```{r fig.align='center'}
+nhanes_sub <- nhanes_clean |>
+  pivot_longer(cols = c(Alcohol12PlusYr, Marijuana, HardDrugs),
+               names_to = "Substance", values_to = "Used") |>
+  filter(!is.na(Used))
+
+nhanes_sub_labels <- nhanes_sub |>
+  group_by(Substance, Gender, Used) |>
+  summarise(count = n(), .groups = "drop") |>
+  group_by(Substance, Gender) |>
+  mutate(
+    pct = count / sum(count),
+    label =  paste0(count, "\n(", percent(pct), ")")
+  ) |>
+  ungroup()
+
+ggplot(nhanes_sub_labels, aes(x = Gender, y = count, fill = Used)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5), size = 3) +
+  facet_wrap(~Substance) +
+  labs(
+    title = "Substance Use by Gender (with Respondent Counts)",
+    x = "Gender",
+    y = "Number of Respondents",
+    fill = "Used"
+  ) +
+  theme_economist(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0, face = "bold", size = 14, margin = margin(b = 15)),
+    legend.position = "right",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    legend.key.size = unit(.8, "lines"),
+    axis.text = element_text(size = 12),
+    axis.title.x = element_text(size = 13, margin = margin(t = 15)),
+    axis.title.y = element_text(size = 13, margin = margin(r = 15)),
+    strip.text = element_text(face = "bold", size = 12)
+  )
+```
+<center><b>
+Figure 6
+</b></center><br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This figure compares substance use behaviors between male and female respondents. The histogram represent the number of individuals who reported using (red) or not using (blue) each substance, including alcohol (past 12 months), hard drugs, and marijuana.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;From the histogram, males generally report higher usage across all categories. For example, 1,178 more males than females reported consuming alcohol in the past year. It appears that both women and men are almost equally as unlikely to use hard drugs. In terms of marijuana use the differences between male and female do not seem to be too pronounced.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This visualization reveals a gender gap in substance use patterns, with men tending to engage more in alcohol, hard drugs, and marijuana use. These patterns are consistent with broader behavioral research showing gender differences in health-risk behaviors. Recognizing such trends can help design gender-specific awareness campaigns and prevention programs that address differing social and cultural influences on substance use.
+
+### Conclusion
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This exploratory analysis of NHANES data reveals several important insights into the relationships among demographic, behavioral, and health factors in the U.S. population. We observed that higher BMI is associated with an increased likelihood of both diabetes and hypertension, with these relationships holding consistently across racial groups. Lifestyle factors such as physical activity and sleep duration show notable impacts on BMI, suggesting targeted interventions in these areas could aid weight management and related health outcomes.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gender and age also play distinct roles, with males generally exhibiting slightly higher BMI values across most age groups, and BMI tending to increase through middle adulthood before stabilizing or declining in older age. Substance use patterns differ mainly by gender, with men reporting higher rates of alcohol, marijuana, and hard drug use, aligning with existing literature on gender disparities in risk behaviors.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Overall, these findings highlight the complex interplay of biological, behavioral, and sociodemographic factors in shaping health risks. They underscore the need for multifaceted, tailored public health strategies that address obesity, chronic disease, and substance use through consideration of demographic contexts and lifestyle factors. Further research could deepen understanding by incorporating longitudinal data and exploring causal pathways.
