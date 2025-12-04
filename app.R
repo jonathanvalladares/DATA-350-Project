@@ -1,13 +1,23 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    https://shiny.posit.co/
-#
+#Group 14
 
 library(shiny)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggthemes)
+library(NHANES)
+library(scales)
+library(paletteer)
+library(ggtext)
+
+facet_labels <- c(
+  Work_bin = "Working Status",
+  Alcohol_bin = "Alcohol Use (12+ Days per Year)",
+  marijuana_bin = "Marijuana Use",
+  drug_bin = "Hard Drug Use",
+  PhysActive_cat = "Physical Activity Level",
+  Sleep_cat = "Sleep Duration"
+)
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
@@ -36,31 +46,6 @@ ui <- navbarPage(
                )
              )
     ), 
-    tabPanel(
-      "Substance Use",
-      sidebarLayout(
-        sidebarPanel(
-          checkboxGroupInput(
-            "substance_choice",
-            "Choose Substance(s):",
-            choices = c("Alcohol" = "Alcohol12PlusYr", "Marijuana" = "Marijuana", "Hard Drugs" = "HardDrugs"),
-            selected = "Alcohol"
-          ),
-          radioButtons(
-            "position_choice",
-            "Bar Position:",
-            choices = c("stack", "fill", "dodge"),
-            selected = "stack"
-          ),
-          sliderInput(
-            "text_size",
-            "Label Size:",
-            min = 2, max = 6, value = 4
-          )
-        ),
-        mainPanel(plotOutput("sub_plot"))
-      )
-    ),
     
     
     tabPanel(
@@ -100,6 +85,21 @@ ui <- navbarPage(
       )
     ),
     
+    tabPanel("Lifestyle Factors",
+             sidebarLayout(
+               sidebarPanel(
+                 radioButtons(
+                   "variable",
+                   "Select Variable to Display Boxplot For:",
+                   choices = setNames(names(facet_labels), facet_labels),
+                   selected = "Work_bin"
+                 )
+               ),
+               mainPanel(
+                 plotOutput("boxplot", height = "600px")
+               )
+             )
+            ),
     tabPanel(
       "Summary",
       sidebarLayout(
@@ -119,7 +119,7 @@ ui <- navbarPage(
           )
         )
       )
-    )
+    ),
 )
 
 # Define server logic required to draw a histogram
@@ -148,6 +148,7 @@ server <- function(input, output, session) {
       geom_violin() + 
       stat_summary(fun.data = function(y) {return(data.frame(y = mean(y), ymin = quantile(y, 0.25), ymax = quantile(y, 0.75)))}, geom = "errorbar", width = 0.1, position=position_dodge(width=0.9)) +
       stat_summary(fun = mean, mapping = aes(group = input$var), position=position_dodge(width=0.9), geom = "point", size = 3, show.legend = F) +
+      theme_clean() +
       scale_fill_paletteer_d("soilpalettes::crait") +
       labs(title = title, x = xlab, caption = "Data obtained from the NHANES::NHANESraw dataset") +
       theme(
@@ -179,13 +180,13 @@ server <- function(input, output, session) {
     xlab <- paste(axis_labels_sum[input$sum])
     title <- paste("Distribution of ", axis_labels_sum[input$sum], " Across NHANES Survey")
     ggplot(data = N, aes(x = as.factor(.data[[input$sum]]))) +
-      geom_bar(data = N %>% tidyr::drop_na(input$sum), stat = "count") +
+      geom_bar(data = N %>% tidyr::drop_na(input$sum), stat = "count", aes(fill = "red"), alpha = 0.8) +
       labs(title = title, y = "Number of Responents", x = xlab, caption = "Data obtained from the NHANES::NHANESraw dataset") +
+      theme_clean() + 
       theme(
         plot.title = element_markdown(family = "sans", face = "bold", size = 20),
         plot.caption = element_markdown(family = "sans", size = 10),
-        legend.title = element_markdown(family = "sans", face = "bold", size = 15),
-        legend.text = element_markdown(family = "sans", size = 12),
+        legend.position = "none",
         axis.title.x = element_markdown(family = "sans", face = "bold", size = 15),
         axis.title.y = element_markdown(family = "sans", face = "bold", size = 15),
         axis.text = element_markdown(family = "sans", size = 12),
@@ -243,45 +244,6 @@ server <- function(input, output, session) {
   
   demographic_vars <- c("Gender" = "Gender", "Race" = "Race1", "Income" = "HHIncomeMid", "Age" = "AgeGroup")
   
-  output$sub_plot <- renderPlot({
-    
-    df <- nhanes_sub_labels |>
-      filter(Substance %in% input$substance_choice)
-    
-    
-    text_position <- switch(
-      input$position_choice,
-      "stack" = position_stack(vjust = 0.5),
-      "fill"  = position_fill(vjust = 0.5),
-      "dodge" = position_dodge(width = 0.9)
-    )
-    
-    ggplot(df, aes(x = Gender, y = count, fill = Used)) +
-      geom_bar(
-        stat = "identity",
-        position = input$position_choice
-      ) +
-      geom_text(
-        aes(label = label),
-        position = text_position,
-        size = input$text_size
-      ) +
-      facet_wrap(~Substance) +
-      scale_fill_manual(values = c("No" = "#0072B2", "Yes" = "#D55E00")) +
-      labs(
-        title = "Substance Use by Gender",
-        x = "Gender",
-        y = "Number of Respondents",
-        fill = "Used"
-      ) +
-      theme_economist(base_size = 14) +
-      theme(
-        plot.title = element_text(hjust = 0, face = "bold"),
-        strip.text = element_text(face = "bold"),
-        legend.position = "top"
-      )
-  })
-  
   output$bmi_explorer_plot <- renderPlot({
     
     df <- nhanes_clean
@@ -326,16 +288,28 @@ server <- function(input, output, session) {
       geom_col(data = summary_df %>% tidyr::drop_na(), alpha = input$bmi_alpha) +
       labs(
         title = paste("Mean BMI by", g1),
+        caption = "Data obtained from the NHANES::NHANESraw dataset",
         x = xlab,
         y = "Mean BMI",
         fill = g1
       ) +
-      theme_economist(base_size = 14) +
-      theme(legend.position = "right",)
+      theme_clean() + 
+      theme(
+        plot.title = element_markdown(family = "sans", face = "bold", size = 20),
+        plot.caption = element_markdown(family = "sans", size = 10),
+        legend.title = element_markdown(family = "sans", face = "bold", size = 15),
+        legend.text = element_markdown(family = "sans", size = 12),
+        legend.position = "right",
+        axis.title.x = element_markdown(family = "sans", face = "bold", size = 15),
+        axis.title.y = element_markdown(family = "sans", face = "bold", size = 15),
+        axis.text = element_markdown(family = "sans", size = 12),
+      )
     
     if (g2 != "None") {
-      p <- p + facet_wrap(as.formula(paste("~", g2)), strip.position = "bottom") + 
-        theme(axis.text.x = element_blank(),
+      p <- p + facet_wrap(as.formula(paste("~", g2)), strip.position = "bottom") +
+        theme(strip.background = element_rect(fill = "white", color = "white"),
+              strip.text = element_text(color = "black", face = "bold", size = 12),
+              axis.text.x = element_blank(),
               axis.ticks.x = element_blank(),
               axis.title.x = element_blank())
     }
@@ -347,6 +321,75 @@ server <- function(input, output, session) {
     p
   })
   
+  #Wyatt's Code
+  clean_data <- NHANESraw |>
+    select(Age, Gender, BMI, PhysActiveDays, Work, Depressed, SleepHrsNight, 
+           Alcohol12PlusYr, Marijuana, HardDrugs) |>
+    filter(!is.na(Age), !is.na(Gender), !is.na(BMI), !is.na(Work), 
+           !is.na(Depressed), !is.na(Alcohol12PlusYr), !is.na(Marijuana), 
+           !is.na(HardDrugs), !is.na(PhysActiveDays), !is.na(SleepHrsNight)) |>
+    mutate(
+      Work_bin = factor(ifelse(Work == "Working", "Yes", "No"), levels = c("No", "Yes")),
+      Alcohol_bin = factor(ifelse(Alcohol12PlusYr == "Yes", "Yes", "No"), levels = c("No", "Yes")),
+      marijuana_bin = factor(ifelse(Marijuana == "Yes", "Yes", "No"), levels = c("No", "Yes")),
+      drug_bin = factor(ifelse(HardDrugs == "Yes", "Yes", "No"), levels = c("No", "Yes")),
+      PhysActive_cat = factor(case_when(
+        PhysActiveDays == 0 ~ "None",
+        PhysActiveDays <= 2 ~ "Low (1-2)",
+        PhysActiveDays <= 5 ~ "Moderate (3-5)",
+        PhysActiveDays > 5 ~ "High (>5)"
+      ), levels = c("None", "Low (1-2)", "Moderate (3-5)", "High (>5)")),
+      Sleep_cat = factor(case_when(
+        SleepHrsNight < 5 ~ "Very Short (<5)",
+        SleepHrsNight < 7 ~ "Short (5-7)",
+        SleepHrsNight <= 9 ~ "Normal (7-9)",
+        SleepHrsNight > 9 ~ "Long (>9)"
+      ), levels = c("Very Short (<5)", "Short (5-7)", "Normal (7-9)", "Long (>9)"))
+    )
+  
+  facet_labels <- c(
+    Work_bin = "Working Status",
+    Alcohol_bin = "Alcohol Use (12+ Days per Year)",
+    marijuana_bin = "Marijuana Use",
+    drug_bin = "Hard Drug Use",
+    PhysActive_cat = "Physical Activity Level",
+    Sleep_cat = "Sleep Duration"
+  )
+  output$boxplot <- renderPlot({
+    var_to_plot <- input$variable
+    
+    plot_data <- clean_data |>
+      select(BMI, all_of(var_to_plot)) |>
+      rename(category = all_of(var_to_plot))
+    
+    lifestyle <- ggplot(plot_data, aes(x = category, y = BMI, fill = category)) +
+      geom_boxplot(outlier.alpha = 0.3) +
+      stat_summary(
+        fun = median,
+        geom = "text",
+        aes(label = round(..y.., 1)),
+        position = position_dodge(width = 0.75),
+        vjust = -0.5,
+        size = 3.5,
+        color = "black"
+      ) +
+      labs(
+        title = paste("BMI Distribution by", facet_labels[[var_to_plot]]),
+        caption = "Data obtained from the NHANES::NHANESraw dataset",
+        x = NULL,
+        y = "BMI"
+      ) +
+      theme_clean() +
+      theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        strip.text = element_text(face = "bold", size = 12),
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 20, margin = margin(b = 25)),
+        plot.caption = element_markdown(family = "sans", size = 10),
+        plot.margin = margin(20, 20, 40, 10)
+      )
+    lifestyle
+  })
 }
 
 # Run the application 
