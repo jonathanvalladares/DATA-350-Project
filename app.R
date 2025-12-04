@@ -10,6 +10,102 @@ library(scales)
 library(paletteer)
 library(ggtext)
 
+#Jonathon
+N <- NHANES::NHANESraw %>%
+  mutate(Hypertension = case_when(BPSysAve >= 130 & BPDiaAve > 80 ~ "Hypertension", BPSysAve < 130 & BPDiaAve <= 80 ~ "Normal Blood Pressure")) %>%
+  #from https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/TCHOL_J.htm. Used conversion factor to take normal guidlined into mmol/L
+  #Ranges from https://www.hopkinsmedicine.org/health/treatment-tests-and-therapies/lipid-panel#:~:text=Optimal:%20Less%20than%20100%20mg,protect%20you%20against%20heart%20disease.
+  mutate(Cholesterol = case_when(TotChol <= 5.172 ~ "Normal", TotChol <= 6.16 ~ "Borderline", TotChol > 6.16 ~ "High")) %>%
+  mutate(AgeGroup = cut(Age, breaks = c(0, 20, 40, 60, 80), labels = c("0–20", "21–40", "41–60", "61–80"))) %>%
+  select(AgeGroup, Hypertension, Diabetes, BMI, Depressed, Cholesterol, Race1, Gender, HHIncomeMid)
+N$Cholesterol <- factor(N$Cholesterol, levels = c("Normal", "Borderline", "High"))
+N$Hypertension <- factor(N$Hypertension, levels = c("Normal Blood Pressure", "Hypertension"))
+
+axis_labels <- c(
+  Hypertension = "Hypertension",
+  Diabetes = "Diabetes",
+  Cholesterol = "Cholesterol Levels",
+  Depressed = "Days Depressed")
+
+axis_labels_sum <- c(
+  Hypertension = "Hypertension",
+  Diabetes = "Diabetes",
+  Cholesterol = "Cholesterol Levels",
+  Depressed = "Days Depressed",
+  Gender = "Gender",
+  Race1 = "Race",
+  HHIncomeMid = "Income",
+  AgeGroup = "Age")
+
+#Jon/Jonathan's Code
+nhanes_clean <- NHANES::NHANESraw |>
+  select(Age, Gender, Race1, BMI, Diabetes,
+         Alcohol12PlusYr, Marijuana, HardDrugs,HHIncomeMid) |>
+  filter(
+    !is.na(Age),
+    !is.na(Gender),
+    !is.na(Race1),
+    !is.na(BMI),
+    !is.na(Diabetes)
+  ) |>
+  mutate(
+    Gender   = droplevels(Gender),
+    Race1    = droplevels(Race1),
+    Diabetes = droplevels(Diabetes),
+    AgeGroup = cut(
+      Age,
+      breaks = c(0, 20, 40, 60, 80),
+      labels = c("0–20", "21–40", "41–60", "61–80")
+    )
+  )
+
+
+nhanes_sub <- nhanes_clean |>
+  pivot_longer(
+    cols = c(Alcohol12PlusYr, Marijuana, HardDrugs),
+    names_to = "Substance",
+    values_to = "Used"
+  ) |>
+  filter(!is.na(Used))
+
+nhanes_sub_labels <- nhanes_sub |>
+  group_by(Substance, Gender, Used) |>
+  summarise(count = n(), .groups = "drop") |>
+  group_by(Substance, Gender) |>
+  mutate(
+    pct = count / sum(count),
+    label = paste0(count, "\n(", percent(pct), ")")
+  ) |>
+  ungroup()
+
+demographic_vars <- c("Gender" = "Gender", "Race" = "Race1", "Income" = "HHIncomeMid", "Age" = "AgeGroup")
+
+#Wyatt
+clean_data <- NHANESraw |>
+  select(Age, Gender, BMI, PhysActiveDays, Work, Depressed, SleepHrsNight, 
+         Alcohol12PlusYr, Marijuana, HardDrugs) |>
+  filter(!is.na(Age), !is.na(Gender), !is.na(BMI), !is.na(Work), 
+         !is.na(Depressed), !is.na(Alcohol12PlusYr), !is.na(Marijuana), 
+         !is.na(HardDrugs), !is.na(PhysActiveDays), !is.na(SleepHrsNight)) |>
+  mutate(
+    Work_bin = factor(ifelse(Work == "Working", "Yes", "No"), levels = c("No", "Yes")),
+    Alcohol_bin = factor(ifelse(Alcohol12PlusYr == "Yes", "Yes", "No"), levels = c("No", "Yes")),
+    marijuana_bin = factor(ifelse(Marijuana == "Yes", "Yes", "No"), levels = c("No", "Yes")),
+    drug_bin = factor(ifelse(HardDrugs == "Yes", "Yes", "No"), levels = c("No", "Yes")),
+    PhysActive_cat = factor(case_when(
+      PhysActiveDays == 0 ~ "None",
+      PhysActiveDays <= 2 ~ "Low (1-2)",
+      PhysActiveDays <= 5 ~ "Moderate (3-5)",
+      PhysActiveDays > 5 ~ "High (>5)"
+    ), levels = c("None", "Low (1-2)", "Moderate (3-5)", "High (>5)")),
+    Sleep_cat = factor(case_when(
+      SleepHrsNight < 5 ~ "Very Short (<5)",
+      SleepHrsNight < 7 ~ "Short (5-7)",
+      SleepHrsNight <= 9 ~ "Normal (7-9)",
+      SleepHrsNight > 9 ~ "Long (>9)"
+    ), levels = c("Very Short (<5)", "Short (5-7)", "Normal (7-9)", "Long (>9)"))
+  )
+
 facet_labels <- c(
   Work_bin = "Working Status",
   Alcohol_bin = "Alcohol Use (12+ Days per Year)",
@@ -125,22 +221,6 @@ ui <- navbarPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   #Jonathon's Code
-  N <- NHANES::NHANESraw %>%
-    mutate(Hypertension = case_when(BPSysAve >= 130 & BPDiaAve > 80 ~ "Hypertension", BPSysAve < 130 & BPDiaAve <= 80 ~ "Normal Blood Pressure")) %>%
-    #from https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/TCHOL_J.htm. Used conversion factor to take normal guidlined into mmol/L
-    #Ranges from https://www.hopkinsmedicine.org/health/treatment-tests-and-therapies/lipid-panel#:~:text=Optimal:%20Less%20than%20100%20mg,protect%20you%20against%20heart%20disease.
-    mutate(Cholesterol = case_when(TotChol <= 5.172 ~ "Normal", TotChol <= 6.16 ~ "Borderline", TotChol > 6.16 ~ "High")) %>%
-    mutate(AgeGroup = cut(Age, breaks = c(0, 20, 40, 60, 80), labels = c("0–20", "21–40", "41–60", "61–80"))) %>%
-    select(AgeGroup, Hypertension, Diabetes, BMI, Depressed, Cholesterol, Race1, Gender, HHIncomeMid)
-  N$Cholesterol <- factor(N$Cholesterol, levels = c("Normal", "Borderline", "High"))
-  N$Hypertension <- factor(N$Hypertension, levels = c("Normal Blood Pressure", "Hypertension"))
-  
-  axis_labels <- c(
-    Hypertension = "Hypertension",
-    Diabetes = "Diabetes",
-    Cholesterol = "Cholesterol Levels",
-    Depressed = "Days Depressed")
-  
   output$plot <- renderPlot({
     xlab <- paste(axis_labels[input$var])
     title <- paste("Distribution, Mean, and Trends of ", axis_labels[input$var], " vs. BMI")
@@ -164,17 +244,7 @@ server <- function(input, output, session) {
     }
     plot
   })
-  
-  axis_labels_sum <- c(
-    Hypertension = "Hypertension",
-    Diabetes = "Diabetes",
-    Cholesterol = "Cholesterol Levels",
-    Depressed = "Days Depressed",
-    Gender = "Gender",
-    Race1 = "Race",
-    HHIncomeMid = "Income",
-    AgeGroup = "Age")
-  
+
   N_reactive_sum <- eventReactive(input$button, {N %>% pull(input$sum) %>% na.omit()})
   N_reactive_plot <- eventReactive(input$button, {
     xlab <- paste(axis_labels_sum[input$sum])
@@ -202,48 +272,6 @@ server <- function(input, output, session) {
   })
   
   #Jon/Jonathan's Code
-  nhanes_clean <- NHANES::NHANESraw |>
-    select(Age, Gender, Race1, BMI, Diabetes,
-           Alcohol12PlusYr, Marijuana, HardDrugs,HHIncomeMid) |>
-    filter(
-      !is.na(Age),
-      !is.na(Gender),
-      !is.na(Race1),
-      !is.na(BMI),
-      !is.na(Diabetes)
-    ) |>
-    mutate(
-      Gender   = droplevels(Gender),
-      Race1    = droplevels(Race1),
-      Diabetes = droplevels(Diabetes),
-      AgeGroup = cut(
-        Age,
-        breaks = c(0, 20, 40, 60, 80),
-        labels = c("0–20", "21–40", "41–60", "61–80")
-      )
-    )
-  
-  
-  nhanes_sub <- nhanes_clean |>
-    pivot_longer(
-      cols = c(Alcohol12PlusYr, Marijuana, HardDrugs),
-      names_to = "Substance",
-      values_to = "Used"
-    ) |>
-    filter(!is.na(Used))
-  
-  nhanes_sub_labels <- nhanes_sub |>
-    group_by(Substance, Gender, Used) |>
-    summarise(count = n(), .groups = "drop") |>
-    group_by(Substance, Gender) |>
-    mutate(
-      pct = count / sum(count),
-      label = paste0(count, "\n(", percent(pct), ")")
-    ) |>
-    ungroup()
-  
-  demographic_vars <- c("Gender" = "Gender", "Race" = "Race1", "Income" = "HHIncomeMid", "Age" = "AgeGroup")
-  
   output$bmi_explorer_plot <- renderPlot({
     
     df <- nhanes_clean
@@ -322,39 +350,6 @@ server <- function(input, output, session) {
   })
   
   #Wyatt's Code
-  clean_data <- NHANESraw |>
-    select(Age, Gender, BMI, PhysActiveDays, Work, Depressed, SleepHrsNight, 
-           Alcohol12PlusYr, Marijuana, HardDrugs) |>
-    filter(!is.na(Age), !is.na(Gender), !is.na(BMI), !is.na(Work), 
-           !is.na(Depressed), !is.na(Alcohol12PlusYr), !is.na(Marijuana), 
-           !is.na(HardDrugs), !is.na(PhysActiveDays), !is.na(SleepHrsNight)) |>
-    mutate(
-      Work_bin = factor(ifelse(Work == "Working", "Yes", "No"), levels = c("No", "Yes")),
-      Alcohol_bin = factor(ifelse(Alcohol12PlusYr == "Yes", "Yes", "No"), levels = c("No", "Yes")),
-      marijuana_bin = factor(ifelse(Marijuana == "Yes", "Yes", "No"), levels = c("No", "Yes")),
-      drug_bin = factor(ifelse(HardDrugs == "Yes", "Yes", "No"), levels = c("No", "Yes")),
-      PhysActive_cat = factor(case_when(
-        PhysActiveDays == 0 ~ "None",
-        PhysActiveDays <= 2 ~ "Low (1-2)",
-        PhysActiveDays <= 5 ~ "Moderate (3-5)",
-        PhysActiveDays > 5 ~ "High (>5)"
-      ), levels = c("None", "Low (1-2)", "Moderate (3-5)", "High (>5)")),
-      Sleep_cat = factor(case_when(
-        SleepHrsNight < 5 ~ "Very Short (<5)",
-        SleepHrsNight < 7 ~ "Short (5-7)",
-        SleepHrsNight <= 9 ~ "Normal (7-9)",
-        SleepHrsNight > 9 ~ "Long (>9)"
-      ), levels = c("Very Short (<5)", "Short (5-7)", "Normal (7-9)", "Long (>9)"))
-    )
-  
-  facet_labels <- c(
-    Work_bin = "Working Status",
-    Alcohol_bin = "Alcohol Use (12+ Days per Year)",
-    marijuana_bin = "Marijuana Use",
-    drug_bin = "Hard Drug Use",
-    PhysActive_cat = "Physical Activity Level",
-    Sleep_cat = "Sleep Duration"
-  )
   output$boxplot <- renderPlot({
     var_to_plot <- input$variable
     
